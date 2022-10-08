@@ -24,7 +24,7 @@ start() ->
 
 mapTopologyNodes(TopologyType, StateMap, NumNodes, NumNodes) ->
 %%  io:format("~p~n",[maps:to_list(StateMap)]),
-  TopologyState = createTopology(TopologyType, StateMap, NumNodes);
+  createTopology(TopologyType, StateMap, NumNodes);
 
 mapTopologyNodes(TopologyType, StateMap, NumNodes, CountStateMap) ->
   receive
@@ -60,34 +60,50 @@ createTopology(TopologyType, StateMap, NumNodes) ->
 %%  io:fwrite("~p~n", [ProcessList]).
   case TType of
     "full" ->
-      io:fwrite("Inside Create~n"),
       State = createFullTopology(StateMap, NumNodes, ProcessList);
+%%      io:format("~p~n",[State]);
     "2d" ->
       State = create2dTopology(StateMap, NumNodes, ProcessList);
     "line" ->
       State = createLineTopology(StateMap, NumNodes, ProcessList);
+%%      io:format("~p~n",[State]);
     "3d" ->
       State = create3dTopology(StateMap, NumNodes, ProcessList)
   end,
   State.
 
-createFullTopology(StateMap, NumNodes, ProcessList) ->
-  io:fwrite("Inside Full Create~n"),
-  Neighbour = findNeighbour(0, StateMap, NumNodes, ProcessList),
-  ok.
+%%%---------------------------------------------------------------------
+%%% Creation of Full Topology and filling Neighbours
+createFullTopology(StateMap, NumNodes, ProcessList) -> findNeighboursInFull(0, StateMap, NumNodes, ProcessList).
 
-findNeighbour(NumNodes, StateMap, NumNodes, ProcessList) -> io:fwrite("~p~n",[maps:to_list(StateMap)]);
-findNeighbour(Start, StateMap, NumNodes, ProcessList) ->
-  io:fwrite("Inside Neighbour~n"),
-  {Left, [_|Right]} = lists:split(Start, ProcessList),
+findNeighboursInFull(NumNodes, StateMap, NumNodes, _) -> StateMap;
+findNeighboursInFull(Position, StateMap, NumNodes, ProcessList) ->
+  {Left, [_|Right]} = lists:split(Position, ProcessList),
   CurrentNeighbours = Left ++ Right,
-  UpdatedState = maps:update(lists:nth(Start+1, ProcessList), [0, CurrentNeighbours], StateMap),
-  findNeighbour(Start + 1, UpdatedState, NumNodes, ProcessList).
+  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
+  findNeighboursInFull(Position + 1, UpdatedState, NumNodes, ProcessList).
+%%%----------------------------------------------------------------------
+
+%%%----------------------------------------------------------------------
+%%% Creation of 2D topology and filling Neighbors
+%%%----------------------------------------------------------------------
+
+%%%----------------------------------------------------------------------
+%%% Creation of Line topology and filling Neighbors
+createLineTopology(StateMap, NumNodes, ProcessList) -> findNeighboursInLine(0, StateMap, NumNodes, ProcessList).
+
+findNeighboursInLine(NumNodes, StateMap, NumNodes, _) -> StateMap;
+findNeighboursInLine(Position, StateMap, NumNodes, ProcessList) ->
+  if
+    ((Position == 0) and (length(ProcessList) > 0)) -> CurrentNeighbours = [lists:nth(2, ProcessList)];
+    Position == length(ProcessList)-1 -> CurrentNeighbours = [lists:nth(NumNodes-1, ProcessList)];
+    true -> CurrentNeighbours = [lists:nth(Position, ProcessList), lists:nth(Position+2, ProcessList)]
+  end,
+  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
+  findNeighboursInLine(Position + 1, UpdatedState, NumNodes, ProcessList).
+%%%----------------------------------------------------------------------
 
 create2dTopology(StateMap, NumNodes, ProcessList) ->
-  erlang:error(not_implemented).
-
-createLineTopology(StateMap, NumNodes, ProcessList) ->
   erlang:error(not_implemented).
 
 create3dTopology(StateMap, NumNodes, ProcessList) ->
