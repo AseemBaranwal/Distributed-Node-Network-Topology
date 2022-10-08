@@ -48,7 +48,7 @@ createNode(MasterPID) ->
   io:fwrite("New Node created with PID ~p~n", [NodePID]),
   MasterPID ! {NodePID}.
 
-updateMap(NodesMap, NodePID, N) ->
+updateMap(NodesMap, NodePID, _) ->
   Map = maps:new(),
   Map1 = maps:put(NodePID, [0, []], Map),
   Map2 = maps:merge(NodesMap, Map1),
@@ -60,13 +60,14 @@ createTopology(TopologyType, StateMap, NumNodes) ->
 %%  io:fwrite("~p~n", [ProcessList]).
   case TType of
     "full" ->
-      State = createFullTopology(StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State]);
+      State = createFullTopology(StateMap, NumNodes, ProcessList),
+      io:format("~p~n",[State]);
     "2d" ->
-      State = create2dTopology(StateMap, NumNodes, ProcessList);
+      State = create2dTopology(StateMap, NumNodes, ProcessList),
+      io:format("~p~n",[State]);
     "line" ->
-      State = createLineTopology(StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State]);
+      State = createLineTopology(StateMap, NumNodes, ProcessList),
+      io:format("~p~n",[State]);
     "3d" ->
       State = create3dTopology(StateMap, NumNodes, ProcessList)
   end,
@@ -86,6 +87,27 @@ findNeighboursInFull(Position, StateMap, NumNodes, ProcessList) ->
 
 %%%----------------------------------------------------------------------
 %%% Creation of 2D topology and filling Neighbors
+create2dTopology(StateMap, NumNodes, ProcessList) -> findNeighboursIn2d(0, StateMap, NumNodes, ProcessList).
+
+findNeighboursIn2d(NumNodes, StateMap, NumNodes, _) -> StateMap;
+findNeighboursIn2d(Position, StateMap, NumNodes, ProcessList) ->
+  N = round(math:sqrt(length(ProcessList))),
+  RowIndex = Position div N,
+  ColIndex = (Position rem N),
+  io:format("N = ~p, RowIndex = ~p, ColIndex = ~p~n", [N, RowIndex, ColIndex]),
+  if
+    (RowIndex==0) -> VerticalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+1, ProcessList)];
+    RowIndex==(NumNodes div N - 1) -> VerticalNeighbours = [lists:nth(ColIndex+1 + (RowIndex-1)*N, ProcessList)];
+    true-> VerticalNeighbours = [lists:nth((RowIndex+1)*N + (ColIndex+1), ProcessList), lists:nth((ColIndex+1) + N*(RowIndex-1), ProcessList)]
+  end,
+  if
+    ColIndex == 0 -> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList)];
+    ColIndex == (NumNodes div N - 1) -> HorizontalNeighbours = [lists:nth(ColIndex + N*RowIndex, ProcessList)];
+    true-> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList), lists:nth(ColIndex + N*RowIndex, ProcessList)]
+  end,
+  CurrentNeighbours = VerticalNeighbours ++ HorizontalNeighbours,
+  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
+  findNeighboursIn2d(Position+1, UpdatedState, NumNodes, ProcessList).
 %%%----------------------------------------------------------------------
 
 %%%----------------------------------------------------------------------
@@ -102,9 +124,6 @@ findNeighboursInLine(Position, StateMap, NumNodes, ProcessList) ->
   UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
   findNeighboursInLine(Position + 1, UpdatedState, NumNodes, ProcessList).
 %%%----------------------------------------------------------------------
-
-create2dTopology(StateMap, NumNodes, ProcessList) ->
-  erlang:error(not_implemented).
 
 create3dTopology(StateMap, NumNodes, ProcessList) ->
   erlang:error(not_implemented).
