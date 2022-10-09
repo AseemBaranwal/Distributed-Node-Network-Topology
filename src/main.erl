@@ -19,8 +19,22 @@ start() ->
 
   io:format("Main Process PID: ~p~n", [self()]),
   StateMap = maps:new(),
-  MasterPID = spawn(fun() -> buildTopologyNodes(TopologyType, StateMap, NumNodes) end),
-  MasterPID ! {spawnProcess, MasterPID, NumNodes}.
+  TType = string:lowercase(TopologyType),
+  if
+    ((TType == "2d") or (TType == "3d")) ->
+      Nearest_NumNodes=round(math:sqrt(NumNodes)),
+      NewNumNodes=Nearest_NumNodes*Nearest_NumNodes,
+      if
+        ((TType == "3d") and (NumNodes < 16)) ->
+          io:fwrite("3d Implementation not possible for number of nodes less than 16~nPlease Try again!!!~n~n"),
+          start();
+        true-> ok
+      end;
+    true ->
+      NewNumNodes=NumNodes+0
+  end,
+  MasterPID = spawn(fun() -> buildTopologyNodes(TType, StateMap, NewNumNodes) end),
+  MasterPID ! {spawnProcess, MasterPID, NewNumNodes}.
 
 mapTopologyNodes(TopologyType, StateMap, NumNodes, NumNodes) -> createTopology(TopologyType, StateMap, NumNodes);
 mapTopologyNodes(TopologyType, StateMap, NumNodes, CountStateMap) ->
@@ -53,21 +67,21 @@ updateMap(NodesMap, NodePID, _) ->
 
 createTopology(TopologyType, StateMap, NumNodes) ->
   ProcessList = maps:keys(StateMap),
-  TType = string:lowercase(TopologyType),
-%%  io:fwrite("~p~n", [ProcessList]).
-  case TType of
+  %%io:fwrite("~p~n", [ProcessList]),
+  %%io:fwrite("~p~n", [TopologyType]),
+  case TopologyType of
     "full" ->
       State = findNeighboursInFull(0, StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State]);
+        %%io:format("~p~n",[State]);
     "2d" ->
       State = findNeighboursIn2d(0, StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State]);
+        %%io:format("~p~n",[State]);
     "line" ->
       State = findNeighboursInLine(0, StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State]);
+        %%io:format("~p~n",[State]);
     "3d" ->
-      State = findNeighboursIn3d(0, StateMap, NumNodes, ProcessList);
-%%      io:format("~p~n",[State])
+      State = findNeighboursIn3d(0, StateMap, NumNodes, ProcessList)
+        %%io:format("~p~n",[State])
   end,
   State.
 
@@ -193,3 +207,4 @@ add3dNode(Position, ProcessList, TwoDNeighbours, Done) ->
       add3dNode(Position, ProcessList, TwoDNeighbours++[RandomNodePID], 1)
   end.
 %%%----------------------------------------------------------------------
+
