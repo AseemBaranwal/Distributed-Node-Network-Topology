@@ -82,11 +82,9 @@ findNeighboursIn2d(Position, StateMap, NumNodes, ProcessList) ->
 %%% Creation of 3d topology and filling Neighbors
 findNeighboursIn3d(NumNodes, StateMap, NumNodes, _) -> StateMap;
 findNeighboursIn3d(Position, StateMap, NumNodes, ProcessList) ->
-  io:fwrite("Inside Neighbours~n"),
   N = round(math:sqrt(length(ProcessList))),
   RowIndex = Position div N,
   ColIndex = (Position rem N),
-%%  io:format("N = ~p, RowIndex = ~p, ColIndex = ~p~n", [N, RowIndex, ColIndex]),
   %% Adding Vertical Neighbours
   if
     RowIndex==0 -> VerticalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+1, ProcessList)];
@@ -125,7 +123,6 @@ findNeighboursIn3d(Position, StateMap, NumNodes, ProcessList) ->
 
 add3dNode(_, _, Neighbours, 1) -> Neighbours;
 add3dNode(Position, ProcessList, TwoDNeighbours, Done) ->
-  io:fwrite("Inside 3d Node Addition"),
   RandomNodePID = lists:nth(rand:uniform(length((ProcessList))), ProcessList),
   Present = lists:member(RandomNodePID, TwoDNeighbours),
   CurrentNode = lists:nth(Position+1, ProcessList),
