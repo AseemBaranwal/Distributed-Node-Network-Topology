@@ -57,16 +57,16 @@ createTopology(TopologyType, StateMap, NumNodes) ->
 %%  io:format("~p~n", [ProcessList]).
   case TType of
     "full" ->
-      State = topology:findNeighboursInFull(0, StateMap, NumNodes, ProcessList),
-      io:format("~p~n",[State]);
+      State = topology:findNeighboursInFull(0, StateMap, NumNodes, ProcessList);
+%%      io:format("~p~n",[State]);
     "line" ->
-      State = topology:findNeighboursInLine(0, StateMap, NumNodes, ProcessList),
-      io:format("~p~n",[State]);
+      State = topology:findNeighboursInLine(0, StateMap, NumNodes, ProcessList);
+%%      io:format("~p~n",[State]);
     "2d" ->
-      State = topology:findNeighboursIn2d(0, StateMap, NumNodes, ProcessList),
-      io:format("~p~n",[State]);
+      State = topology:findNeighboursIn2d(0, StateMap, NumNodes, ProcessList);
+%%      io:format("~p~n",[State]);
     "3d" ->
-      State = topology:findNeighboursIn3d(0, StateMap, NumNodes, ProcessList),
-      io:format("~p~n",[State])
+      State = topology:findNeighboursIn3d(0, StateMap, NumNodes, ProcessList)
+%%      io:format("~p~n",[State])
   end,
   State.
