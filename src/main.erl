@@ -31,25 +31,25 @@ start() ->
       end;
     true ->NewNumNodes=NumNodes+0
   end,
-  MasterPID = spawn(fun() -> buildTopologyNodes(TType, StateMap, NewNumNodes) end),
+  MasterPID = spawn(fun() -> buildTopologyNodesAndImplementAlgorithm(TType, StateMap, NewNumNodes, Algorithm) end),
   MasterPID ! {spawnProcess, MasterPID, NewNumNodes}.
 
-mapTopologyNodes(TopologyType, StateMap, NumNodes, NumNodes) -> createTopology(TopologyType, StateMap, NumNodes);
-mapTopologyNodes(TopologyType, StateMap, NumNodes, CountStateMap) ->
+mapTopologyNodes(TopologyType, StateMap, NumNodes, NumNodes, Algorithm) -> createTopology(TopologyType, StateMap, NumNodes, Algorithm);
+mapTopologyNodes(TopologyType, StateMap, NumNodes, CountStateMap, Algorithm) ->
   receive
     {NodePID} ->
       UpdatedStateMap = updateMap(StateMap, NodePID, 0),
-      mapTopologyNodes(TopologyType, UpdatedStateMap, NumNodes, CountStateMap + 1)
+      mapTopologyNodes(TopologyType, UpdatedStateMap, NumNodes, CountStateMap + 1, Algorithm)
   end.
 
-buildTopologyNodes(TopologyType, StateMap, NumNodes) ->
+buildTopologyNodesAndImplementAlgorithm(TopologyType, StateMap, NumNodes, Algorithm) ->
   receive
     {spawnProcess, MasterPID, NumNodes} ->
       lists:foreach(
         fun(_) ->
           link(spawn(fun() -> createNode(MasterPID) end))
         end, lists:seq(1, NumNodes)),
-      mapTopologyNodes(TopologyType, StateMap, NumNodes, 0)
+      mapTopologyNodes(TopologyType, StateMap, NumNodes, 0, Algorithm)
   end.
 
 createNode(MasterPID) ->
@@ -63,7 +63,7 @@ updateMap(NodesMap, NodePID, _) ->
   Map2 = maps:merge(NodesMap, Map1),
   Map2.
 
-createTopology(TopologyType, StateMap, NumNodes) ->
+createTopology(TopologyType, StateMap, NumNodes, Algorithm) ->
   ProcessList = maps:keys(StateMap),
 %%  io:format("~p~n", [ProcessList]).
   case TopologyType of
@@ -76,4 +76,5 @@ createTopology(TopologyType, StateMap, NumNodes) ->
     "3d" ->
       State = topology:findNeighboursIn3d(0, StateMap, NumNodes, ProcessList)
   end,
-  State.
+  self() ! {neighbours, self(), State, Algorithm},
+  algorithm:implementAlgorithm().
