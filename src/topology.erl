@@ -42,7 +42,6 @@ findNeighboursIn2d(Position, StateMap, NumNodes, ProcessList) ->
   N = round(math:sqrt(length(ProcessList))),
   RowIndex = Position div N,
   ColIndex = (Position rem N),
-%%  io:format("N = ~p, RowIndex = ~p, ColIndex = ~p~n", [N, RowIndex, ColIndex]),
   %% Adding Vertical Neighbours
   if
     RowIndex==0 -> VerticalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+1, ProcessList)];

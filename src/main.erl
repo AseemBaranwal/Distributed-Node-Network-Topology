@@ -65,7 +65,6 @@ updateMap(NodesMap, NodePID, _) ->
 
 createTopology(TopologyType, StateMap, NumNodes, Algorithm) ->
   ProcessList = maps:keys(StateMap),
-%%  io:format("~p~n", [ProcessList]).
   case TopologyType of
     "full" ->
       State = topology:findNeighboursInFull(0, StateMap, NumNodes, ProcessList);
@@ -76,5 +75,5 @@ createTopology(TopologyType, StateMap, NumNodes, Algorithm) ->
     "3d" ->
       State = topology:findNeighboursIn3d(0, StateMap, NumNodes, ProcessList)
   end,
-  self() ! {neighbours, self(), State, Algorithm},
+  self() ! {neighbours, State, Algorithm},
   algorithm:implementAlgorithm().
