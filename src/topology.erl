@@ -10,125 +10,66 @@
 -author("aseem").
 
 %% API
--export([findNeighboursInFull/4, findNeighboursInLine/4, findNeighboursIn2d/4, findNeighboursIn3d/4]).
+-export([getLineNeighbours/4, get2DNeighbours/4, get3dNeighbours/4]).
 
-%%%---------------------------------------------------------------------
-%%% Creation of Full Topology and filling Neighbours
-findNeighboursInFull(NumNodes, StateMap, NumNodes, _) -> StateMap;
-findNeighboursInFull(Position, StateMap, NumNodes, ProcessList) ->
-  {Left, [_|Right]} = lists:split(Position, ProcessList),
-  CurrentNeighbours = Left ++ Right,
-  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
-  findNeighboursInFull(Position + 1, UpdatedState, NumNodes, ProcessList).
-%%%----------------------------------------------------------------------
+getElementAtIndex(List, Index) ->
+  {_, [Element|_]} = lists:split(Index, List),
+  Element.
 
-%%%----------------------------------------------------------------------
-%%% Creation of Line topology and filling Neighbors
-findNeighboursInLine(NumNodes, StateMap, NumNodes, _) -> StateMap;
-findNeighboursInLine(Position, StateMap, NumNodes, ProcessList) ->
-  if
-    ((Position == 0) and (length(ProcessList) > 0)) -> CurrentNeighbours = [lists:nth(2, ProcessList)];
-    Position == length(ProcessList)-1 -> CurrentNeighbours = [lists:nth(NumNodes-1, ProcessList)];
-    true -> CurrentNeighbours = [lists:nth(Position, ProcessList), lists:nth(Position+2, ProcessList)]
+getLineNeighbours(Index, ProcessIDList, _, AllProcessCount) ->
+  if Index =:= 0 , Index + 1 < AllProcessCount ->
+    NeighboursForLine = [getElementAtIndex(ProcessIDList, Index + 1)];
+    Index =:= AllProcessCount - 1, Index - 1 >= 0 ->
+      NeighboursForLine = [getElementAtIndex(ProcessIDList, Index - 1)];
+    Index - 1 >= 0, Index + 1 < AllProcessCount ->
+      NeighboursForLine = [getElementAtIndex(ProcessIDList, Index - 1)] ++ [getElementAtIndex(ProcessIDList, Index + 1)];
+    true -> NeighboursForLine = []
   end,
-  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
-  findNeighboursInLine(Position + 1, UpdatedState, NumNodes, ProcessList).
-%%%----------------------------------------------------------------------
+  NeighboursForLine.
 
-%%%----------------------------------------------------------------------
-%%% Creation of 2D topology and filling Neighbors
-findNeighboursIn2d(NumNodes, StateMap, NumNodes, _) -> StateMap;
-findNeighboursIn2d(Position, StateMap, NumNodes, ProcessList) ->
-  N = round(math:sqrt(length(ProcessList))),
-  RowIndex = Position div N,
-  ColIndex = (Position rem N),
-  %% Adding Vertical Neighbours
-  if
-    RowIndex==0 -> VerticalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+1, ProcessList)];
-    RowIndex==(NumNodes div N - 1) -> VerticalNeighbours = [lists:nth(ColIndex+1 + (RowIndex-1)*N, ProcessList)];
-    true-> VerticalNeighbours = [lists:nth((RowIndex+1)*N + (ColIndex+1), ProcessList), lists:nth((ColIndex+1) + N*(RowIndex-1), ProcessList)]
+get3dNeighbours(Position, NodePidList, NeighbourList, TotalNodes)->
+  TwoDNeighbourList = get2DNeighbours(Position, NodePidList, NeighbourList, TotalNodes),
+  RemainingProcesses = NodePidList -- ([getElementAtIndex(NodePidList, Position)] ++ TwoDNeighbourList),
+  if length(RemainingProcesses) =/= 0 ->
+    RandomNeighbourFor3D = [lists:nth(rand:uniform(length(RemainingProcesses)), RemainingProcesses)];
+    true -> RandomNeighbourFor3D = []
   end,
-  %% Adding horizontal neighbours
-  if
-    ColIndex == 0 -> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList)];
-    ColIndex == (NumNodes div N - 1) -> HorizontalNeighbours = [lists:nth(ColIndex + N*RowIndex, ProcessList)];
-    true-> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList), lists:nth(ColIndex + N*RowIndex, ProcessList)]
-  end,
-  %% Adding Right Diagonal neighbors
-  if
-    ((RowIndex==0) and (ColIndex==(NumNodes div N) - 1)) -> RightDiagonalNeighbours = [];
-    ((RowIndex==(NumNodes div N) - 1) and (ColIndex==0)) -> RightDiagonalNeighbours = [];
-    ((RowIndex==0) or (ColIndex==0)) -> RightDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+2, ProcessList)];
-    ((RowIndex==(NumNodes div N - 1)) or (ColIndex==(NumNodes div N - 1))) -> RightDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex, ProcessList)];
-    true -> RightDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+2, ProcessList), lists:nth((RowIndex-1)*N + ColIndex, ProcessList)]
-  end,
-  %% Adding Left Diagonal Neighbours
-  if
-    ((RowIndex==0) and (ColIndex==0)) -> LeftDiagonalNeighbours = [];
-    ((RowIndex==(NumNodes div N - 1)) and (ColIndex==(NumNodes div N - 1))) -> LeftDiagonalNeighbours = [];
-    (RowIndex==0) -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList)];
-    (ColIndex==0) -> LeftDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)];
-    (ColIndex==(NumNodes div N - 1)) -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList)];
-    (RowIndex==(NumNodes div N - 1)) -> LeftDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)];
-    true -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList), lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)]
-  end,
-  CurrentNeighbours = VerticalNeighbours ++ HorizontalNeighbours ++ RightDiagonalNeighbours ++ LeftDiagonalNeighbours,
-  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, CurrentNeighbours], StateMap),
-  findNeighboursIn2d(Position+1, UpdatedState, NumNodes, ProcessList).
-%%%----------------------------------------------------------------------
+  ThreeDNeighbours = TwoDNeighbourList ++ RandomNeighbourFor3D,
+  ThreeDNeighbours.
 
-%%%----------------------------------------------------------------------
-%%% Creation of 3d topology and filling Neighbors
-findNeighboursIn3d(NumNodes, StateMap, NumNodes, _) -> StateMap;
-findNeighboursIn3d(Position, StateMap, NumNodes, ProcessList) ->
-  N = round(math:sqrt(length(ProcessList))),
-  RowIndex = Position div N,
-  ColIndex = (Position rem N),
-  %% Adding Vertical Neighbours
-  if
-    RowIndex==0 -> VerticalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+1, ProcessList)];
-    RowIndex==(NumNodes div N - 1) -> VerticalNeighbours = [lists:nth(ColIndex+1 + (RowIndex-1)*N, ProcessList)];
-    true-> VerticalNeighbours = [lists:nth((RowIndex+1)*N + (ColIndex+1), ProcessList), lists:nth((ColIndex+1) + N*(RowIndex-1), ProcessList)]
+get2DNeighbours(Index, NodePidList, NeighbourList, TotalNodes) ->
+  GridSize = round(math:sqrt(TotalNodes)),
+  if ((Index + 1) rem GridSize) =/= 0 ->
+    RightNeighbour = [getElementAtIndex(NodePidList, Index + 1)];
+    true -> RightNeighbour = []
   end,
-  %% Adding horizontal neighbours
-  if
-    ColIndex == 0 -> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList)];
-    ColIndex == (NumNodes div N - 1) -> HorizontalNeighbours = [lists:nth(ColIndex + N*RowIndex, ProcessList)];
-    true-> HorizontalNeighbours = [lists:nth(N*RowIndex + ColIndex+2, ProcessList), lists:nth(ColIndex + N*RowIndex, ProcessList)]
+  if (Index - 1) >= 0 , (Index rem GridSize) =/= 0 ->
+    LeftNeighbour = [getElementAtIndex(NodePidList, Index - 1)];
+    true -> LeftNeighbour = []
   end,
-  %% Adding Right Diagonal neighbors
-  if
-    ((RowIndex==0) and (ColIndex==(NumNodes div N) - 1)) -> RightDiagonalNeighbours = [];
-    ((RowIndex==(NumNodes div N) - 1) and (ColIndex==0)) -> RightDiagonalNeighbours = [];
-    ((RowIndex==0) or (ColIndex==0)) -> RightDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+2, ProcessList)];
-    ((RowIndex==(NumNodes div N - 1)) or (ColIndex==(NumNodes div N - 1))) -> RightDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex, ProcessList)];
-    true -> RightDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex+2, ProcessList), lists:nth((RowIndex-1)*N + ColIndex, ProcessList)]
+  if (Index + GridSize) < TotalNodes ->
+    DownNeighbour = [getElementAtIndex(NodePidList, Index + GridSize)];
+    true -> DownNeighbour = []
   end,
-  %% Adding Left Diagonal Neighbours
-  if
-    ((RowIndex==0) and (ColIndex==0)) -> LeftDiagonalNeighbours = [];
-    ((RowIndex==(NumNodes div N - 1)) and (ColIndex==(NumNodes div N - 1))) -> LeftDiagonalNeighbours = [];
-    (RowIndex==0) -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList)];
-    (ColIndex==0) -> LeftDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)];
-    (ColIndex==(NumNodes div N - 1)) -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList)];
-    (RowIndex==(NumNodes div N - 1)) -> LeftDiagonalNeighbours = [lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)];
-    true -> LeftDiagonalNeighbours = [lists:nth((RowIndex+1)*N + ColIndex, ProcessList), lists:nth((RowIndex-1)*N + ColIndex+2, ProcessList)]
+  if (Index - GridSize) >= 0 ->
+    UpNeighbour = [getElementAtIndex(NodePidList, Index - GridSize)];
+    true-> UpNeighbour = []
   end,
-  %% Adding the extra Random Node
-  TwoDNeighbours = VerticalNeighbours ++ HorizontalNeighbours ++ RightDiagonalNeighbours ++ LeftDiagonalNeighbours,
-  AllNeighbours = add3dNode(Position, ProcessList, TwoDNeighbours, 0),
-  UpdatedState = maps:update(lists:nth(Position+1, ProcessList), [0, AllNeighbours], StateMap),
-  findNeighboursIn3d(Position+1, UpdatedState, NumNodes, ProcessList).
-
-add3dNode(_, _, Neighbours, 1) -> Neighbours;
-add3dNode(Position, ProcessList, TwoDNeighbours, Done) ->
-  RandomNodePID = lists:nth(rand:uniform(length((ProcessList))), ProcessList),
-  Present = lists:member(RandomNodePID, TwoDNeighbours),
-  CurrentNode = lists:nth(Position+1, ProcessList),
-  if
-    ((Present) or (RandomNodePID == CurrentNode))->
-      add3dNode(Position, ProcessList, TwoDNeighbours, Done);
-    true ->
-      add3dNode(Position, ProcessList, TwoDNeighbours++[RandomNodePID], 1)
-  end.
-%%%----------------------------------------------------------------------
+  if (Index + GridSize + 1) < TotalNodes , (Index + 1) rem GridSize =/= 0->
+    DownLeftNeighbour = [getElementAtIndex(NodePidList, Index + GridSize + 1)];
+    true-> DownLeftNeighbour = []
+  end,
+  if (Index - GridSize - 1) >= 0 , Index rem GridSize =/= 0->
+    UpLeftNeighbour = [getElementAtIndex(NodePidList, Index - GridSize - 1)];
+    true-> UpLeftNeighbour = []
+  end,
+  if (Index + GridSize - 1) < TotalNodes , Index rem GridSize =/= 0 ->
+    DownRightNeighbour = [getElementAtIndex(NodePidList, Index + GridSize - 1)];
+    true-> DownRightNeighbour = []
+  end,
+  if (Index - GridSize + 1) >= 0 , (Index + 1) rem GridSize =/= 0 ->
+    UpRightNeighbour = [getElementAtIndex(NodePidList, Index - GridSize + 1)];
+    true-> UpRightNeighbour = []
+  end,
+  FinalNeighbours = sets:to_list(sets:from_list(NeighbourList ++ RightNeighbour ++ LeftNeighbour ++ UpNeighbour ++ DownNeighbour ++ DownLeftNeighbour ++ UpLeftNeighbour ++ DownRightNeighbour  ++ UpRightNeighbour)),
+  FinalNeighbours.
